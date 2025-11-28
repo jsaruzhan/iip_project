@@ -1,1 +1,6 @@
-To do:
+To do MVP:
+  - Splash screen
+  - Main screen:
+      - Body detection
+      - Clothes superposition
+  - Extra: Page for clothes
