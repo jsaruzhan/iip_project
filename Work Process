@@ -1,0 +1,10 @@
+Tech Stack
+      - Android Studio (Kotlin)
+      - CameraX --> Camera preview and frame analysis
+      - MediaPipe Tasks API --> Pose landmark detection
+      - Canvas/OpenGL --> Rendering clothing overlays
+
+How It Works
+Core Concept
+      The app uses MediaPipe's pose detection to identify key body landmarks (shoulders, hips, knees, ankles) from the camera feed. 
+      Clothing images (PNGs with transparent backgrounds) are then scaled and positioned based on these landmarks to create a virtual try-on effect.
