@@ -1,1 +1,5 @@
-# CameraX + MediaPipe
+Tech Stack
+      - Android Studio (Kotlin)
+      - CameraX --> Camera preview and frame analysis
+      - MediaPipe Tasks API --> Pose landmark detection
+      - Canvas/OpenGL --> Rendering clothing overlays
