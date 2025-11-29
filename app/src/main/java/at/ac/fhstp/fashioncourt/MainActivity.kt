@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import android.widget.FrameLayout
+import android.widget.ImageButton
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,6 +21,9 @@ import at.ac.fhstp.fashioncourt.detection.PoseDetectorHelper
 import at.ac.fhstp.fashioncourt.overlay.CalibrationOverlayView
 import at.ac.fhstp.fashioncourt.overlay.PoseOverlayView
 import at.ac.fhstp.fashioncourt.ui.theme.FashionCourtTheme
+import android.graphics.Color
+import android.view.Gravity
+import android.widget.LinearLayout
 
 class MainActivity : ComponentActivity() {
 
@@ -44,13 +48,12 @@ class MainActivity : ComponentActivity() {
         setContent {
             FashionCourtTheme {
                 ARTryOnScreen(
-                    onViewsCreated = { previewView, poseOverlay, calibrationOverlay ->
+                    onViewsCreated = { previewView, poseOverlay, calibrationOverlay, switchButton ->
                         poseOverlayView = poseOverlay
                         calibrationOverlayView = calibrationOverlay
 
                         calibrationOverlay.onCalibrationComplete = {
                             runOnUiThread {
-                                // Hide calibration, show pose overlay for try-on
                                 calibrationOverlayView?.visibility = android.view.View.GONE
                                 poseOverlayView?.visibility = android.view.View.VISIBLE
                                 Toast.makeText(this, "Calibration complete!", Toast.LENGTH_SHORT).show()
@@ -58,6 +61,11 @@ class MainActivity : ComponentActivity() {
                         }
 
                         setupCamera(previewView)
+
+                        switchButton.setOnClickListener {
+                            cameraManager?.switchCamera()
+                        }
+
                         checkCameraPermission()
                     }
                 )
@@ -114,7 +122,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun ARTryOnScreen(
-    onViewsCreated: (PreviewView, PoseOverlayView, CalibrationOverlayView) -> Unit
+    onViewsCreated: (PreviewView, PoseOverlayView, CalibrationOverlayView, ImageButton) -> Unit
 ) {
     AndroidView(
         modifier = Modifier.fillMaxSize(),
@@ -133,7 +141,7 @@ fun ARTryOnScreen(
                         FrameLayout.LayoutParams.MATCH_PARENT,
                         FrameLayout.LayoutParams.MATCH_PARENT
                     )
-                    visibility = android.view.View.GONE // Hidden during calibration
+                    visibility = android.view.View.GONE
                 }
 
                 val calibrationOverlay = CalibrationOverlayView(context).apply {
@@ -143,11 +151,25 @@ fun ARTryOnScreen(
                     )
                 }
 
+                val switchButton = ImageButton(context).apply {
+                    layoutParams = FrameLayout.LayoutParams(
+                        150,
+                        150
+                    ).apply {
+                        gravity = Gravity.TOP or Gravity.END
+                        setMargins(0, 80, 40, 0)
+                    }
+                    setBackgroundColor(Color.parseColor("#80F8BBD9")) // Semi-transparent pink
+                    setImageResource(android.R.drawable.ic_menu_camera)
+                    setPadding(20, 20, 20, 20)
+                }
+
                 addView(previewView)
                 addView(poseOverlay)
                 addView(calibrationOverlay)
+                addView(switchButton)
 
-                onViewsCreated(previewView, poseOverlay, calibrationOverlay)
+                onViewsCreated(previewView, poseOverlay, calibrationOverlay, switchButton)
             }
         }
     )

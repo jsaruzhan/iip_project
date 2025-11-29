@@ -23,54 +23,77 @@ class CameraManager(
 ) {
     private var cameraProvider: ProcessCameraProvider? = null
     private val cameraExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+    private var lifecycleOwner: LifecycleOwner? = null
+    private var isFrontCamera = true  // Default to front camera
 
     fun startCamera(lifecycleOwner: LifecycleOwner) {
+        this.lifecycleOwner = lifecycleOwner
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
 
         cameraProviderFuture.addListener({
             cameraProvider = cameraProviderFuture.get()
-
-            val preview = Preview.Builder()
-                .build()
-                .also {
-                    it.setSurfaceProvider(previewView.surfaceProvider)
-                }
-
-            val imageAnalyzer = ImageAnalysis.Builder()
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
-                .setTargetRotation(previewView.display.rotation)
-                .build()
-                .also {
-                    it.setAnalyzer(cameraExecutor) { imageProxy ->
-                        analyzeImage(imageProxy)
-                    }
-                }
-
-            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-
-            try {
-                cameraProvider?.unbindAll()
-                cameraProvider?.bindToLifecycle(
-                    lifecycleOwner,
-                    cameraSelector,
-                    preview,
-                    imageAnalyzer
-                )
-            } catch (e: Exception) {
-                Log.e("CameraManager", "Use case binding failed", e)
-            }
-
+            bindCamera()
         }, ContextCompat.getMainExecutor(context))
     }
+
+    private fun bindCamera() {
+        val cameraProvider = cameraProvider ?: return
+        val lifecycleOwner = lifecycleOwner ?: return
+
+        val preview = Preview.Builder()
+            .build()
+            .also {
+                it.setSurfaceProvider(previewView.surfaceProvider)
+            }
+
+        val imageAnalyzer = ImageAnalysis.Builder()
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
+            .setTargetRotation(previewView.display.rotation)
+            .build()
+            .also {
+                it.setAnalyzer(cameraExecutor) { imageProxy ->
+                    analyzeImage(imageProxy)
+                }
+            }
+
+        val cameraSelector = if (isFrontCamera) {
+            CameraSelector.DEFAULT_FRONT_CAMERA
+        } else {
+            CameraSelector.DEFAULT_BACK_CAMERA
+        }
+
+        try {
+            cameraProvider.unbindAll()
+            cameraProvider.bindToLifecycle(
+                lifecycleOwner,
+                cameraSelector,
+                preview,
+                imageAnalyzer
+            )
+        } catch (e: Exception) {
+            Log.e("CameraManager", "Use case binding failed", e)
+        }
+    }
+
+    fun switchCamera() {
+        isFrontCamera = !isFrontCamera
+        bindCamera()
+    }
+
+    fun isFrontCamera(): Boolean = isFrontCamera
 
     private fun analyzeImage(imageProxy: ImageProxy) {
         val bitmap = imageProxy.toBitmap()
 
-        // Rotate bitmap to match display orientation
         val rotationDegrees = imageProxy.imageInfo.rotationDegrees
         val matrix = Matrix()
         matrix.postRotate(rotationDegrees.toFloat())
+
+        // Mirror for front camera
+        if (isFrontCamera) {
+            matrix.postScale(-1f, 1f)
+        }
 
         val rotatedBitmap = Bitmap.createBitmap(
             bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true
