@@ -24,7 +24,7 @@ class CameraManager(
     private var cameraProvider: ProcessCameraProvider? = null
     private val cameraExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     private var lifecycleOwner: LifecycleOwner? = null
-    private var isFrontCamera = true  // Default to front camera
+    private var isFrontCamera = false  // Default to back camera
 
     fun startCamera(lifecycleOwner: LifecycleOwner) {
         this.lifecycleOwner = lifecycleOwner
