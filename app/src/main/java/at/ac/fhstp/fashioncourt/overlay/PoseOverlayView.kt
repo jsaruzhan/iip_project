@@ -1,12 +1,12 @@
 package at.ac.fhstp.fashioncourt.overlay
 
 import android.content.Context
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
+import android.graphics.*
 import android.util.AttributeSet
 import android.view.View
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarkerResult
+import kotlin.math.atan2
+import kotlin.math.hypot
 
 class PoseOverlayView @JvmOverloads constructor(
     context: Context,
@@ -16,33 +16,21 @@ class PoseOverlayView @JvmOverloads constructor(
 
     private var results: PoseLandmarkerResult? = null
 
-    private val pointPaint = Paint().apply {
-        color = Color.RED
-        style = Paint.Style.FILL
-        isAntiAlias = true
-    }
+    // Clothing bitmap
+    private var clothingBitmap: Bitmap? = null
 
-    private val linePaint = Paint().apply {
-        color = Color.GREEN
-        style = Paint.Style.STROKE
-        strokeWidth = 6f
-        isAntiAlias = true
-    }
+    // MediaPipe landmark indices
+    private val LEFT_SHOULDER = 11
+    private val RIGHT_SHOULDER = 12
+    private val LEFT_HIP = 23
+    private val RIGHT_HIP = 24
 
-    // indices use MediaPipe's landmark indices
-    private val bodyConnections = listOf(
-        11 to 12,          // shoulders
-        11 to 13, 13 to 15, // left arm
-        12 to 14, 14 to 16, // right arm
-        11 to 23, 12 to 24, // torso sides
-        23 to 24,          // hips
-        23 to 25, 25 to 27, // left leg
-        24 to 26, 26 to 28  // right leg
-    )
+    // Helper paint just in case
+    private val bitmapPaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
     fun updateResults(result: PoseLandmarkerResult) {
         results = result
-        invalidate()   // trigger redraw
+        invalidate()
     }
 
     fun clear() {
@@ -50,37 +38,78 @@ class PoseOverlayView @JvmOverloads constructor(
         invalidate()
     }
 
+    /** Public method for MainActivity/Compose to set chosen clothing */
+    fun setClothingBitmap(bitmap: Bitmap?) {
+        clothingBitmap = bitmap
+        invalidate()
+    }
+
+    // Helper functions
+    private fun midpoint(a: PointF, b: PointF) = PointF(
+        (a.x + b.x) / 2f,
+        (a.y + b.y) / 2f
+    )
+
+    private fun dist(a: PointF, b: PointF) =
+        hypot((a.x - b.x).toDouble(), (a.y - b.y).toDouble()).toFloat()
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
+        val bm = clothingBitmap ?: return
         val result = results ?: return
         if (result.landmarks().isEmpty()) return
 
-        val landmarks = result.landmarks()[0]
+        val lm = result.landmarks()[0]
 
-        val viewWidth = width.toFloat()
-        val viewHeight = height.toFloat()
+        // Safety check
+        if (lm.size <= RIGHT_HIP) return
 
-        // draw bones
-        for ((startIdx, endIdx) in bodyConnections) {
-            if (startIdx < landmarks.size && endIdx < landmarks.size) {
-                val start = landmarks[startIdx]
-                val end = landmarks[endIdx]
+        val w = width.toFloat()
+        val h = height.toFloat()
 
-                val startX = start.x() * viewWidth
-                val startY = start.y() * viewHeight
-                val endX = end.x() * viewWidth
-                val endY = end.y() * viewHeight
+        // Convert from normalized coordinates → screen coordinates
+        val leftShoulder = PointF(lm[LEFT_SHOULDER].x() * w, lm[LEFT_SHOULDER].y() * h)
+        val rightShoulder = PointF(lm[RIGHT_SHOULDER].x() * w, lm[RIGHT_SHOULDER].y() * h)
+        val leftHip = PointF(lm[LEFT_HIP].x() * w, lm[LEFT_HIP].y() * h)
+        val rightHip = PointF(lm[RIGHT_HIP].x() * w, lm[RIGHT_HIP].y() * h)
 
-                canvas.drawLine(startX, startY, endX, endY, linePaint)
-            }
-        }
+        // Compute position and transforms
+        val shoulderMid = midpoint(leftShoulder, rightShoulder)
+        val hipMid = midpoint(leftHip, rightHip)
 
-        // draw joints
-        for (lm in landmarks) {
-            val cx = lm.x() * viewWidth
-            val cy = lm.y() * viewHeight
-            canvas.drawCircle(cx, cy, 12f, pointPaint)
-        }
+        val detectedShoulderWidth = dist(leftShoulder, rightShoulder)
+
+        // This is a tunable parameter depending on your PNG design
+        val referenceShoulderWidthPx = 250f
+
+        val scale = detectedShoulderWidth / referenceShoulderWidthPx
+
+        val angle = Math.toDegrees(
+            atan2(
+                (rightShoulder.y - leftShoulder.y).toDouble(),
+                (rightShoulder.x - leftShoulder.x).toDouble()
+            )
+        ).toFloat()
+
+        // Vertical placement between shoulders & hips
+        val centerX = (shoulderMid.x + hipMid.x) / 2f
+        val centerY = (shoulderMid.y * 0.35f) + (hipMid.y * 0.65f)
+
+        val matrix = Matrix()
+
+        // Move image pivot to its center
+        matrix.postTranslate(-bm.width / 2f, -bm.height / 2f)
+
+        // Scale to body
+        matrix.postScale(scale, scale)
+
+        // Rotate to body angle
+        matrix.postRotate(angle)
+
+        // Move to detected body center
+        matrix.postTranslate(centerX, centerY)
+
+        canvas.drawBitmap(bm, matrix, bitmapPaint)
     }
 }

@@ -2,6 +2,8 @@ package at.ac.fhstp.fashioncourt
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.util.Log
 import android.widget.FrameLayout
@@ -19,11 +21,11 @@ import androidx.core.content.ContextCompat
 import at.ac.fhstp.fashioncourt.camera.CameraManager
 import at.ac.fhstp.fashioncourt.detection.PoseDetectorHelper
 import at.ac.fhstp.fashioncourt.overlay.CalibrationOverlayView
+import at.ac.fhstp.fashioncourt.overlay.ClothingOverlayView
 import at.ac.fhstp.fashioncourt.overlay.PoseOverlayView
 import at.ac.fhstp.fashioncourt.ui.theme.FashionCourtTheme
 import android.graphics.Color
 import android.view.Gravity
-import android.widget.LinearLayout
 
 class MainActivity : ComponentActivity() {
 
@@ -31,6 +33,7 @@ class MainActivity : ComponentActivity() {
     private var poseDetectorHelper: PoseDetectorHelper? = null
     private var poseOverlayView: PoseOverlayView? = null
     private var calibrationOverlayView: CalibrationOverlayView? = null
+    private var clothingOverlayView: ClothingOverlayView? = null
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -48,14 +51,24 @@ class MainActivity : ComponentActivity() {
         setContent {
             FashionCourtTheme {
                 ARTryOnScreen(
-                    onViewsCreated = { previewView, poseOverlay, calibrationOverlay, switchButton ->
+                    onViewsCreated = { previewView, poseOverlay, calibrationOverlay, clothingOverlay, switchButton ->
                         poseOverlayView = poseOverlay
                         calibrationOverlayView = calibrationOverlay
+                        clothingOverlayView = clothingOverlay
 
                         calibrationOverlay.onCalibrationComplete = {
                             runOnUiThread {
                                 calibrationOverlayView?.visibility = android.view.View.GONE
-                                poseOverlayView?.visibility = android.view.View.VISIBLE
+                                clothingOverlayView?.visibility = android.view.View.VISIBLE
+
+                                // Load clothes
+                                loadBitmapFromAssets("clothes/Tops/top1.png")?.let {
+                                    clothingOverlayView?.setTopBitmap(it)
+                                }
+                                loadBitmapFromAssets("clothes/Bottoms/bottom1.png")?.let {
+                                    clothingOverlayView?.setBottomBitmap(it)
+                                }
+
                                 Toast.makeText(this, "Calibration complete!", Toast.LENGTH_SHORT).show()
                             }
                         }
@@ -88,6 +101,7 @@ class MainActivity : ComponentActivity() {
                 runOnUiThread {
                     poseOverlayView?.updateResults(result)
                     calibrationOverlayView?.updateResults(result)
+                    clothingOverlayView?.updateResults(result)
                 }
             },
             onError = { error ->
@@ -118,11 +132,20 @@ class MainActivity : ComponentActivity() {
         cameraManager?.shutdown()
         poseDetectorHelper?.close()
     }
+
+    private fun loadBitmapFromAssets(path: String): Bitmap? {
+        return try {
+            assets.open(path).use { BitmapFactory.decodeStream(it) }
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Failed to load bitmap: $path", e)
+            null
+        }
+    }
 }
 
 @Composable
 fun ARTryOnScreen(
-    onViewsCreated: (PreviewView, PoseOverlayView, CalibrationOverlayView, ImageButton) -> Unit
+    onViewsCreated: (PreviewView, PoseOverlayView, CalibrationOverlayView, ClothingOverlayView, ImageButton) -> Unit
 ) {
     AndroidView(
         modifier = Modifier.fillMaxSize(),
@@ -151,6 +174,14 @@ fun ARTryOnScreen(
                     )
                 }
 
+                val clothingOverlay = ClothingOverlayView(context).apply {
+                    layoutParams = FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams.MATCH_PARENT
+                    )
+                    visibility = android.view.View.GONE
+                }
+
                 val switchButton = ImageButton(context).apply {
                     layoutParams = FrameLayout.LayoutParams(
                         150,
@@ -159,17 +190,18 @@ fun ARTryOnScreen(
                         gravity = Gravity.TOP or Gravity.END
                         setMargins(0, 80, 40, 0)
                     }
-                    setBackgroundColor(Color.parseColor("#80F8BBD9")) // Semi-transparent pink
+                    setBackgroundColor(Color.parseColor("#80F8BBD9"))
                     setImageResource(android.R.drawable.ic_menu_camera)
                     setPadding(20, 20, 20, 20)
                 }
 
                 addView(previewView)
                 addView(poseOverlay)
+                addView(clothingOverlay)
                 addView(calibrationOverlay)
                 addView(switchButton)
 
-                onViewsCreated(previewView, poseOverlay, calibrationOverlay, switchButton)
+                onViewsCreated(previewView, poseOverlay, calibrationOverlay, clothingOverlay, switchButton)
             }
         }
     )
