@@ -127,21 +127,18 @@ class ClothingOverlayView @JvmOverloads constructor(
         val leftAnkle = PointF(lm[LEFT_ANKLE].x() * w, lm[LEFT_ANKLE].y() * h)
         val rightAnkle = PointF(lm[RIGHT_ANKLE].x() * w, lm[RIGHT_ANKLE].y() * h)
 
-        // Draw top
-        topBitmap?.let { bm ->
-            topBounds?.let { bounds ->
-                drawTop(canvas, bm, bounds, leftShoulder, rightShoulder, leftHip, rightHip)
-            }
-        }
-
-        // Draw bottom
         bottomBitmap?.let { bm ->
             bottomBounds?.let { bounds ->
                 drawBottom(canvas, bm, bounds, leftHip, rightHip, leftAnkle, rightAnkle)
             }
         }
 
-        // Draw shoes
+        topBitmap?.let { bm ->
+            topBounds?.let { bounds ->
+                drawTop(canvas, bm, bounds, leftShoulder, rightShoulder, leftHip, rightHip)
+            }
+        }
+
         shoesBitmap?.let { bm ->
             drawShoes(canvas, bm, leftAnkle, rightAnkle)
         }
@@ -157,7 +154,6 @@ class ClothingOverlayView @JvmOverloads constructor(
         rightHip: PointF
     ) {
         val shoulderMid = midpoint(leftShoulder, rightShoulder)
-        val hipMid = midpoint(leftHip, rightHip)
 
         val bodyShoulderWidth = dist(leftShoulder, rightShoulder)
 
@@ -206,10 +202,10 @@ class ClothingOverlayView @JvmOverloads constructor(
         val scale = targetWidth / clothingWidth
 
         val scaledWidth = clothingWidth * scale
-        val scaledHeight = bodyLegLength * 1.1f  // Go down to ankles
+        val scaledHeight = bodyLegLength * 1.1f
 
         val centerX = hipMid.x
-        val topY = hipMid.y - (scaledHeight * 0.1f)  // Start slightly above hips
+        val topY = hipMid.y - (scaledHeight * 0.1f)
 
         val srcRect = Rect(bounds.left, bounds.top, bounds.right, bounds.bottom)
         val destRect = RectF(
@@ -236,7 +232,6 @@ class ClothingOverlayView @JvmOverloads constructor(
         val scaledWidth = halfWidth * shoeScale
         val scaledHeight = bm.height * shoeScale
 
-        // SWAPPED: Right half of image goes to LEFT foot
         val leftSrcRect = Rect(halfWidth, 0, bm.width, bm.height)
         val leftDestRect = RectF(
             leftAnkle.x - scaledWidth / 2f,
@@ -246,7 +241,6 @@ class ClothingOverlayView @JvmOverloads constructor(
         )
         canvas.drawBitmap(bm, leftSrcRect, leftDestRect, bitmapPaint)
 
-        // SWAPPED: Left half of image goes to RIGHT foot
         val rightSrcRect = Rect(0, 0, halfWidth, bm.height)
         val rightDestRect = RectF(
             rightAnkle.x - scaledWidth / 2f,

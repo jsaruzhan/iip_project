@@ -26,6 +26,7 @@ import at.ac.fhstp.fashioncourt.overlay.PoseOverlayView
 import at.ac.fhstp.fashioncourt.ui.theme.FashionCourtTheme
 import android.graphics.Color
 import android.view.Gravity
+import android.widget.TextView
 
 class MainActivity : ComponentActivity() {
 
@@ -35,7 +36,11 @@ class MainActivity : ComponentActivity() {
     private var calibrationOverlayView: CalibrationOverlayView? = null
     private var clothingOverlayView: ClothingOverlayView? = null
 
-    // Clothing lists
+    private var topLabelView: TextView? = null
+    private var bottomLabelView: TextView? = null
+    private var shoesLabelView: TextView? = null
+    private var switchLabelView: TextView? = null
+
     private val topsList = mutableListOf<Bitmap>()
     private val bottomsList = mutableListOf<Bitmap>()
     private val shoesList = mutableListOf<Bitmap>()
@@ -63,17 +68,32 @@ class MainActivity : ComponentActivity() {
                 ARTryOnScreen(
                     onViewsCreated = { previewView, poseOverlay, calibrationOverlay, clothingOverlay,
                                        switchButton, prevTopBtn, nextTopBtn, prevBottomBtn, nextBottomBtn,
-                                       prevShoesBtn, nextShoesBtn ->
+                                       prevShoesBtn, nextShoesBtn, topLabel, bottomLabel, shoesLabel, switchLabel ->
+
                         poseOverlayView = poseOverlay
                         calibrationOverlayView = calibrationOverlay
                         clothingOverlayView = clothingOverlay
+
+                        topLabelView = topLabel
+                        bottomLabelView = bottomLabel
+                        shoesLabelView = shoesLabel
+                        switchLabelView = switchLabel
+
+                        fun updateLabels() {
+                            topLabelView?.text =
+                                if (topsList.isNotEmpty()) "Shirt ${currentTopIndex + 1}/${topsList.size}" else "Shirt"
+                            bottomLabelView?.text =
+                                if (bottomsList.isNotEmpty()) "Pants ${currentBottomIndex + 1}/${bottomsList.size}" else "Pants"
+                            shoesLabelView?.text =
+                                if (shoesList.isNotEmpty()) "Shoes ${currentShoesIndex + 1}/${shoesList.size}" else "Shoes"
+                            switchLabelView?.text = "Switch"
+                        }
 
                         calibrationOverlay.onCalibrationComplete = {
                             runOnUiThread {
                                 calibrationOverlayView?.visibility = android.view.View.GONE
                                 clothingOverlayView?.visibility = android.view.View.VISIBLE
 
-                                // Show first clothing items
                                 if (topsList.isNotEmpty()) {
                                     clothingOverlayView?.setTopBitmap(topsList[currentTopIndex])
                                 }
@@ -84,13 +104,19 @@ class MainActivity : ComponentActivity() {
                                     clothingOverlayView?.setShoesBitmap(shoesList[currentShoesIndex])
                                 }
 
-                                // Show all navigation buttons
+                                updateLabels()
+
                                 prevTopBtn.visibility = android.view.View.VISIBLE
                                 nextTopBtn.visibility = android.view.View.VISIBLE
                                 prevBottomBtn.visibility = android.view.View.VISIBLE
                                 nextBottomBtn.visibility = android.view.View.VISIBLE
                                 prevShoesBtn.visibility = android.view.View.VISIBLE
                                 nextShoesBtn.visibility = android.view.View.VISIBLE
+
+                                topLabel.visibility = android.view.View.VISIBLE
+                                bottomLabel.visibility = android.view.View.VISIBLE
+                                shoesLabel.visibility = android.view.View.VISIBLE
+                                switchLabel.visibility = android.view.View.VISIBLE
                             }
                         }
 
@@ -98,45 +124,48 @@ class MainActivity : ComponentActivity() {
                             cameraManager?.switchCamera()
                         }
 
-                        // Top navigation
                         prevTopBtn.setOnClickListener {
                             if (topsList.isNotEmpty()) {
                                 currentTopIndex = if (currentTopIndex > 0) currentTopIndex - 1 else topsList.size - 1
                                 clothingOverlayView?.setTopBitmap(topsList[currentTopIndex])
+                                updateLabels()
                             }
                         }
                         nextTopBtn.setOnClickListener {
                             if (topsList.isNotEmpty()) {
                                 currentTopIndex = (currentTopIndex + 1) % topsList.size
                                 clothingOverlayView?.setTopBitmap(topsList[currentTopIndex])
+                                updateLabels()
                             }
                         }
 
-                        // Bottom navigation
                         prevBottomBtn.setOnClickListener {
                             if (bottomsList.isNotEmpty()) {
                                 currentBottomIndex = if (currentBottomIndex > 0) currentBottomIndex - 1 else bottomsList.size - 1
                                 clothingOverlayView?.setBottomBitmap(bottomsList[currentBottomIndex])
+                                updateLabels()
                             }
                         }
                         nextBottomBtn.setOnClickListener {
                             if (bottomsList.isNotEmpty()) {
                                 currentBottomIndex = (currentBottomIndex + 1) % bottomsList.size
                                 clothingOverlayView?.setBottomBitmap(bottomsList[currentBottomIndex])
+                                updateLabels()
                             }
                         }
 
-                        // Shoes navigation
                         prevShoesBtn.setOnClickListener {
                             if (shoesList.isNotEmpty()) {
                                 currentShoesIndex = if (currentShoesIndex > 0) currentShoesIndex - 1 else shoesList.size - 1
                                 clothingOverlayView?.setShoesBitmap(shoesList[currentShoesIndex])
+                                updateLabels()
                             }
                         }
                         nextShoesBtn.setOnClickListener {
                             if (shoesList.isNotEmpty()) {
                                 currentShoesIndex = (currentShoesIndex + 1) % shoesList.size
                                 clothingOverlayView?.setShoesBitmap(shoesList[currentShoesIndex])
+                                updateLabels()
                             }
                         }
 
@@ -149,17 +178,14 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun loadAllClothing() {
-        // Load tops
         for (i in 1..5) {
             loadBitmapFromAssets("clothes/Tops/top$i.png")?.let { topsList.add(it) }
         }
 
-        // Load bottoms (folder is "Bottom" not "Bottoms")
         for (i in 1..4) {
             loadBitmapFromAssets("clothes/Bottom/bottom$i.png")?.let { bottomsList.add(it) }
         }
 
-        // Load shoes
         for (i in 1..4) {
             loadBitmapFromAssets("clothes/Shoes/shoes$i.png")?.let { shoesList.add(it) }
         }
@@ -228,7 +254,7 @@ class MainActivity : ComponentActivity() {
 fun ARTryOnScreen(
     onViewsCreated: (PreviewView, PoseOverlayView, CalibrationOverlayView, ClothingOverlayView,
                      ImageButton, ImageButton, ImageButton, ImageButton, ImageButton,
-                     ImageButton, ImageButton) -> Unit
+                     ImageButton, ImageButton, TextView, TextView, TextView, TextView) -> Unit
 ) {
     AndroidView(
         modifier = Modifier.fillMaxSize(),
@@ -275,11 +301,25 @@ fun ARTryOnScreen(
                     setPadding(20, 20, 20, 20)
                 }
 
-                // Top buttons - at shoulder/chest level (25% from top)
+                val switchLabel = TextView(context).apply {
+                    layoutParams = FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.WRAP_CONTENT,
+                        FrameLayout.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        gravity = Gravity.TOP or Gravity.END
+                        setMargins(0, 210, 40, 0)
+                    }
+                    setTextColor(Color.WHITE)
+                    setBackgroundColor(Color.parseColor("#80000000"))
+                    setPadding(18, 10, 18, 10)
+                    text = "Switch"
+                    visibility = android.view.View.GONE
+                }
+
                 val prevTopBtn = ImageButton(context).apply {
                     layoutParams = FrameLayout.LayoutParams(100, 100).apply {
                         gravity = Gravity.TOP or Gravity.START
-                        setMargins(20, 400, 0, 0)
+                        setMargins(20, 500, 0, 0)
                     }
                     setBackgroundColor(Color.parseColor("#80F8BBD9"))
                     setImageResource(android.R.drawable.ic_media_previous)
@@ -289,18 +329,32 @@ fun ARTryOnScreen(
                 val nextTopBtn = ImageButton(context).apply {
                     layoutParams = FrameLayout.LayoutParams(100, 100).apply {
                         gravity = Gravity.TOP or Gravity.END
-                        setMargins(0, 400, 20, 0)
+                        setMargins(0, 500, 20, 0)
                     }
                     setBackgroundColor(Color.parseColor("#80F8BBD9"))
                     setImageResource(android.R.drawable.ic_media_next)
                     visibility = android.view.View.GONE
                 }
 
-                // Bottom/pants buttons - at hip/thigh level (50% from top)
+                val topLabel = TextView(context).apply {
+                    layoutParams = FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.WRAP_CONTENT,
+                        FrameLayout.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                        setMargins(0, 520, 0, 0)
+                    }
+                    setTextColor(Color.WHITE)
+                    setBackgroundColor(Color.parseColor("#80000000"))
+                    setPadding(22, 12, 22, 12)
+                    text = "Shirt"
+                    visibility = android.view.View.GONE
+                }
+
                 val prevBottomBtn = ImageButton(context).apply {
                     layoutParams = FrameLayout.LayoutParams(100, 100).apply {
                         gravity = Gravity.TOP or Gravity.START
-                        setMargins(20, 900, 0, 0)
+                        setMargins(20, 1000, 0, 0)
                     }
                     setBackgroundColor(Color.parseColor("#80E1BEE7"))
                     setImageResource(android.R.drawable.ic_media_previous)
@@ -310,18 +364,32 @@ fun ARTryOnScreen(
                 val nextBottomBtn = ImageButton(context).apply {
                     layoutParams = FrameLayout.LayoutParams(100, 100).apply {
                         gravity = Gravity.TOP or Gravity.END
-                        setMargins(0, 900, 20, 0)
+                        setMargins(0, 1000, 20, 0)
                     }
                     setBackgroundColor(Color.parseColor("#80E1BEE7"))
                     setImageResource(android.R.drawable.ic_media_next)
                     visibility = android.view.View.GONE
                 }
 
-                // Shoes buttons - at feet level (80% from top)
+                val bottomLabel = TextView(context).apply {
+                    layoutParams = FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.WRAP_CONTENT,
+                        FrameLayout.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                        setMargins(0, 1020, 0, 0)
+                    }
+                    setTextColor(Color.WHITE)
+                    setBackgroundColor(Color.parseColor("#80000000"))
+                    setPadding(22, 12, 22, 12)
+                    text = "Pants"
+                    visibility = android.view.View.GONE
+                }
+
                 val prevShoesBtn = ImageButton(context).apply {
                     layoutParams = FrameLayout.LayoutParams(100, 100).apply {
                         gravity = Gravity.TOP or Gravity.START
-                        setMargins(20, 1500, 0, 0)
+                        setMargins(20, 1600, 0, 0)
                     }
                     setBackgroundColor(Color.parseColor("#80B3E5FC"))
                     setImageResource(android.R.drawable.ic_media_previous)
@@ -331,10 +399,25 @@ fun ARTryOnScreen(
                 val nextShoesBtn = ImageButton(context).apply {
                     layoutParams = FrameLayout.LayoutParams(100, 100).apply {
                         gravity = Gravity.TOP or Gravity.END
-                        setMargins(0, 1500, 20, 0)
+                        setMargins(0, 1600, 20, 0)
                     }
                     setBackgroundColor(Color.parseColor("#80B3E5FC"))
                     setImageResource(android.R.drawable.ic_media_next)
+                    visibility = android.view.View.GONE
+                }
+
+                val shoesLabel = TextView(context).apply {
+                    layoutParams = FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.WRAP_CONTENT,
+                        FrameLayout.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                        setMargins(0, 1620, 0, 0)
+                    }
+                    setTextColor(Color.WHITE)
+                    setBackgroundColor(Color.parseColor("#80000000"))
+                    setPadding(22, 12, 22, 12)
+                    text = "Shoes"
                     visibility = android.view.View.GONE
                 }
 
@@ -342,17 +425,27 @@ fun ARTryOnScreen(
                 addView(poseOverlay)
                 addView(clothingOverlay)
                 addView(calibrationOverlay)
+
                 addView(switchButton)
+                addView(switchLabel)
+
                 addView(prevTopBtn)
                 addView(nextTopBtn)
+                addView(topLabel)
+
                 addView(prevBottomBtn)
                 addView(nextBottomBtn)
+                addView(bottomLabel)
+
                 addView(prevShoesBtn)
                 addView(nextShoesBtn)
+                addView(shoesLabel)
 
-                onViewsCreated(previewView, poseOverlay, calibrationOverlay, clothingOverlay,
+                onViewsCreated(
+                    previewView, poseOverlay, calibrationOverlay, clothingOverlay,
                     switchButton, prevTopBtn, nextTopBtn, prevBottomBtn, nextBottomBtn,
-                    prevShoesBtn, nextShoesBtn)
+                    prevShoesBtn, nextShoesBtn, topLabel, bottomLabel, shoesLabel, switchLabel
+                )
             }
         }
     )
