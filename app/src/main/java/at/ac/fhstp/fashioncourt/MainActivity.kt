@@ -341,8 +341,8 @@ fun ARTryOnScreen(
                         FrameLayout.LayoutParams.WRAP_CONTENT,
                         FrameLayout.LayoutParams.WRAP_CONTENT
                     ).apply {
-                        gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-                        setMargins(0, 520, 0, 0)
+                        gravity = Gravity.TOP or Gravity.START
+                        setMargins(20, 420, 0, 0)
                     }
                     setTextColor(Color.WHITE)
                     setBackgroundColor(Color.parseColor("#80000000"))
@@ -376,8 +376,8 @@ fun ARTryOnScreen(
                         FrameLayout.LayoutParams.WRAP_CONTENT,
                         FrameLayout.LayoutParams.WRAP_CONTENT
                     ).apply {
-                        gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-                        setMargins(0, 1020, 0, 0)
+                        gravity = Gravity.TOP or Gravity.START
+                        setMargins(20, 920, 0, 0)
                     }
                     setTextColor(Color.WHITE)
                     setBackgroundColor(Color.parseColor("#80000000"))
@@ -385,6 +385,7 @@ fun ARTryOnScreen(
                     text = "Pants"
                     visibility = android.view.View.GONE
                 }
+
 
                 val prevShoesBtn = ImageButton(context).apply {
                     layoutParams = FrameLayout.LayoutParams(100, 100).apply {
@@ -411,8 +412,8 @@ fun ARTryOnScreen(
                         FrameLayout.LayoutParams.WRAP_CONTENT,
                         FrameLayout.LayoutParams.WRAP_CONTENT
                     ).apply {
-                        gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-                        setMargins(0, 1620, 0, 0)
+                        gravity = Gravity.TOP or Gravity.START
+                        setMargins(20, 1520, 0, 0)
                     }
                     setTextColor(Color.WHITE)
                     setBackgroundColor(Color.parseColor("#80000000"))
